@@ -1,0 +1,356 @@
+// Soonly — schéma de base de données
+// PostgreSQL + Prisma. Généré pour Auth.js (adapter Prisma) et le domaine métier Soonly.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Domaine
+// ------------------------------------------------------------------
+
+enum Plan {
+  ESSENTIEL
+  PLUS
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  UNPAID
+}
+
+enum ReminderCategory {
+  ADMIN
+  SANTE
+  MAISON
+  VEHICULE
+  ASSURANCE
+  BANQUE
+  ABONNEMENT
+  FAMILLE
+  ANIMAUX
+  VOYAGE
+  TRAVAIL
+  LOISIRS
+  GARANTIE
+  IMPOTS
+  AUTRE
+}
+
+enum Recurrence {
+  NONE
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum ReminderStatus {
+  ACTIVE
+  DONE
+  ARCHIVED
+}
+
+enum ReminderSource {
+  MANUAL
+  GOOGLE_CALENDAR
+  MICROSOFT_CALENDAR
+  APPLE_ICS
+  GMAIL
+  OUTLOOK_MAIL
+  DOCTOLIB
+  IMPORT_ICS
+  IMPORT_CSV
+  DOCUMENT
+}
+
+enum Channel {
+  EMAIL
+  PUSH
+  SMS
+  WHATSAPP
+}
+
+enum OffsetUnit {
+  MINUTE
+  HOUR
+  DAY
+  WEEK
+}
+
+enum ProviderKind {
+  GOOGLE_CALENDAR
+  MICROSOFT_CALENDAR
+  APPLE_ICS
+  GMAIL
+  OUTLOOK_MAIL
+  DOCTOLIB
+}
+
+enum AccountStatus {
+  CONNECTED
+  EXPIRED
+  REVOKED
+  ERROR
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+model User {
+  id              String    @id @default(cuid())
+  name            String?
+  email           String?   @unique
+  emailVerified   DateTime?
+  image           String?
+  phone           String?
+  phoneVerifiedAt DateTime?
+  timezone        String    @default("Europe/Paris")
+  locale          String    @default("fr")
+  // Préférences de consentement par canal (RGPD).
+  consentEmail    Boolean   @default(true)
+  consentPush     Boolean   @default(false)
+  consentSms      Boolean   @default(false)
+  consentWhatsapp Boolean   @default(false)
+  hideSensitive   Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  subscription      Subscription?
+  reminders         Reminder[]
+  documents         Document[]
+  connectedAccounts ConnectedAccount[]
+  externalEvents    ExternalEvent[]
+  notificationLogs  NotificationLog[]
+  pushSubscriptions PushSubscription[]
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  plan                 Plan               @default(ESSENTIEL)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(TRIALING)
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Reminder {
+  id               String           @id @default(cuid())
+  userId           String
+  title            String
+  description      String?
+  category         ReminderCategory @default(AUTRE)
+  dueAt            DateTime
+  allDay           Boolean          @default(true)
+  timezone         String           @default("Europe/Paris")
+  recurrence       Recurrence       @default(NONE)
+  priority         Priority         @default(NORMAL)
+  status           ReminderStatus   @default(ACTIVE)
+  source           ReminderSource   @default(MANUAL)
+  externalSourceId String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rules    ReminderRule[]
+  document Document?        @relation("ReminderDocument")
+  logs     NotificationLog[]
+
+  @@index([userId, status, dueAt])
+  @@unique([userId, source, externalSourceId], name: "user_source_external")
+}
+
+model ReminderRule {
+  id          String     @id @default(cuid())
+  reminderId  String
+  offsetValue Int        @default(7)
+  offsetUnit  OffsetUnit @default(DAY)
+  channel     Channel    @default(EMAIL)
+  enabled     Boolean    @default(true)
+  // Verrou anti-doublon : horodatage du dernier envoi pour cette règle/occurrence.
+  lastFiredFor DateTime?
+
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([reminderId])
+}
+
+model Document {
+  id               String           @id @default(cuid())
+  userId           String
+  title            String
+  fileKey          String // clé objet dans le bucket privé (jamais public)
+  fileUrl          String? // éventuelle URL signée mise en cache (courte durée)
+  mimeType         String
+  size             Int
+  category         ReminderCategory @default(AUTRE)
+  expirationDate   DateTime?
+  linkedReminderId String?          @unique
+  tags             String[]         @default([])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedReminder Reminder? @relation("ReminderDocument", fields: [linkedReminderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, expirationDate])
+}
+
+model ConnectedAccount {
+  id                    String        @id @default(cuid())
+  userId                String
+  provider              ProviderKind
+  providerAccountId     String
+  accessTokenEncrypted  String?       @db.Text
+  refreshTokenEncrypted String?       @db.Text
+  expiresAt             DateTime?
+  scopes                String[]      @default([])
+  status                AccountStatus @default(CONNECTED)
+  lastSyncedAt          DateTime?
+  // Métadonnées non sensibles (email du compte, id de calendrier Soonly…).
+  meta                  Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+model ExternalEvent {
+  id                 String       @id @default(cuid())
+  userId             String
+  provider           ProviderKind
+  externalId         String
+  title              String
+  startsAt           DateTime
+  endsAt             DateTime?
+  location           String?
+  raw                Json?
+  importedReminderId String?
+  createdAt          DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, externalId])
+  @@index([userId, startsAt])
+}
+
+model NotificationLog {
+  id                String             @id @default(cuid())
+  userId            String
+  reminderId        String?
+  channel           Channel
+  status            NotificationStatus @default(QUEUED)
+  providerMessageId String?
+  error             String?
+  sentAt            DateTime           @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminder Reminder? @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, sentAt])
+}
+
+// Catalogue des intégrations disponibles (activables par l'exploitant).
+model Integration {
+  id          String       @id @default(cuid())
+  provider    ProviderKind @unique
+  name        String
+  description String
+  status      String       @default("available") // available | beta | official-pending
+  enabled     Boolean      @default(true)
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Vérification de numéro par OTP (codes hachés, jamais en clair).
+model PhoneOtp {
+  id         String   @id @default(cuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([phone])
+}
+
+// ------------------------------------------------------------------
+// Tables Auth.js (adapter Prisma)
+// ------------------------------------------------------------------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

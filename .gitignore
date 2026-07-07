@@ -8,3 +8,5 @@ out
 npm-debug.log*
 .vercel
 /prisma/*.db
+
+.vercel

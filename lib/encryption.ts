@@ -45,3 +45,23 @@ export function hashCode(code: string): string {
 export function randomOtp(): string {
   return String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
 }
+
+/**
+ * Hachage de mot de passe via scrypt (natif Node, aucune dépendance).
+ * Format persistant : `scrypt:<saltHex>:<derivedHex>`.
+ */
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16);
+  const derived = crypto.scryptSync(password, salt, 64);
+  return `scrypt:${salt.toString("hex")}:${derived.toString("hex")}`;
+}
+
+/** Vérifie un mot de passe contre un hash `scrypt:<salt>:<derived>` (comparaison à temps constant). */
+export function verifyPassword(password: string, stored: string | null | undefined): boolean {
+  if (!stored) return false;
+  const [scheme, saltHex, hashHex] = stored.split(":");
+  if (scheme !== "scrypt" || !saltHex || !hashHex) return false;
+  const expected = Buffer.from(hashHex, "hex");
+  const derived = crypto.scryptSync(password, Buffer.from(saltHex, "hex"), expected.length);
+  return expected.length === derived.length && crypto.timingSafeEqual(derived, expected);
+}

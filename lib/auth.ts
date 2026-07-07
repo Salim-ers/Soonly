@@ -5,7 +5,7 @@ import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "./db";
 import { env, featureConfigured } from "./env";
-import { hashCode } from "./encryption";
+import { hashCode, verifyPassword } from "./encryption";
 
 /**
  * Configuration Auth.js (NextAuth v5).
@@ -26,6 +26,22 @@ if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
 if (featureConfigured.email()) {
   providers.push(Resend({ apiKey: env.RESEND_API_KEY!, from: env.EMAIL_FROM }));
 }
+
+providers.push(
+  Credentials({
+    id: "password",
+    name: "Mot de passe",
+    credentials: { email: {}, password: {} },
+    authorize: async (creds) => {
+      const email = String(creds?.email ?? "").trim().toLowerCase();
+      const password = String(creds?.password ?? "");
+      if (!email || !password) return null;
+      const user = await db.user.findUnique({ where: { email } });
+      if (!user || !verifyPassword(password, user.passwordHash)) return null;
+      return { id: user.id, name: user.name, email: user.email };
+    },
+  })
+);
 
 providers.push(
   Credentials({

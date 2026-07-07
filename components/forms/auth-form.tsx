@@ -13,15 +13,28 @@ import { Mail, ArrowRight, Loader2 } from "lucide-react";
  */
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"email" | "phone">("email");
+  const [tab, setTab] = useState<"password" | "email" | "phone">("password");
   const [loading, setLoading] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [phone, setPhone] = useState("");
   const [otpStep, setOtpStep] = useState(false);
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function signInPassword() {
+    setError(null);
+    if (!/.+@.+\..+/.test(email)) return setError("Saisissez une adresse email valide.");
+    if (!password) return setError("Saisissez votre mot de passe.");
+    setLoading("password");
+    const res = await signIn("password", { email, password, redirect: false });
+    setLoading(null);
+    if (res?.error) return setError("Email ou mot de passe incorrect.");
+    router.push("/dashboard");
+    router.refresh();
+  }
 
   async function sendMagic() {
     setError(null);
@@ -67,19 +80,30 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {mode === "signup" ? "Créez votre espace en moins d'une minute." : "Connectez-vous pour retrouver votre espace."}
       </p>
 
-      <div className="mb-5 grid grid-cols-2 gap-1 rounded-[12px] bg-bg-deep p-1">
-        {(["email", "phone"] as const).map((t) => (
+      <div className="mb-5 grid grid-cols-3 gap-1 rounded-[12px] bg-bg-deep p-1">
+        {(["password", "email", "phone"] as const).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setError(null); }}
             className={`h-[38px] rounded-[9px] text-[13.5px] font-semibold transition-colors ${tab === t ? "bg-surface text-teal shadow-s" : "text-ink-2"}`}
           >
-            {t === "email" ? "Email" : "Téléphone"}
+            {t === "password" ? "Mot de passe" : t === "email" ? "Email" : "Téléphone"}
           </button>
         ))}
       </div>
 
-      {tab === "email" ? (
+      {tab === "password" ? (
+        <>
+          <label className="field-label" htmlFor="pw-email">Adresse email</label>
+          <input id="pw-email" type="email" autoComplete="email" className="inp" placeholder="vous@exemple.fr" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className="field-label mt-3" htmlFor="pw-pass">Mot de passe</label>
+          <input id="pw-pass" type="password" autoComplete="current-password" className="inp" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") signInPassword(); }} />
+          <button className="btn btn-lg mt-4 w-full" onClick={signInPassword} disabled={loading === "password"}>
+            {loading === "password" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Se connecter"}
+          </button>
+        </>
+      ) : tab === "email" ? (
         emailSent ? (
           <div className="flex items-start gap-3 rounded-[14px] border border-teal-tint bg-teal-wash p-4">
             <Mail className="mt-0.5 h-5 w-5 text-teal-soft" />

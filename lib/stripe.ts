@@ -9,7 +9,7 @@ export function stripe(): Stripe {
   if (!featureConfigured.stripe()) {
     throw new Error("Stripe non configuré (STRIPE_SECRET_KEY / STRIPE_PRICE_ESSENTIEL / STRIPE_PRICE_PLUS).");
   }
-  if (!_stripe) _stripe = new Stripe(env.STRIPE_SECRET_KEY!, { apiVersion: "2024-12-18.acacia" });
+  if (!_stripe) _stripe = new Stripe(env.STRIPE_SECRET_KEY!, { apiVersion: "2025-02-24.acacia" });
   return _stripe;
 }
 

@@ -44,7 +44,7 @@ export function ReminderList({ reminders, onOpenDetail }: { reminders: ClientRem
     <div className="flex flex-col gap-2.5">
       {reminders.map((r) => {
         const meta = categoryMeta(r.category);
-        const Icon = (Icons as Record<string, Icons.LucideIcon>)[meta.icon] ?? Icons.Tag;
+        const Icon = (Icons as unknown as Record<string, Icons.LucideIcon>)[meta.icon] ?? Icons.Tag;
         const b = badge(r.dueAt);
         const incomplete = r.rules.length === 0;
         return (
@@ -63,7 +63,7 @@ export function ReminderList({ reminders, onOpenDetail }: { reminders: ClientRem
                     <span className="inline-flex gap-1.5">
                       {[...new Set(r.rules.map((x) => x.channel))].map((ch) => {
                         const cm = CHANNELS.find((c) => c.id === ch);
-                        const CI = (Icons as Record<string, Icons.LucideIcon>)[cm?.icon ?? "Bell"] ?? Icons.Bell;
+                        const CI = (Icons as unknown as Record<string, Icons.LucideIcon>)[cm?.icon ?? "Bell"] ?? Icons.Bell;
                         return <CI key={ch} className="h-[14px] w-[14px]" />;
                       })}
                     </span></>

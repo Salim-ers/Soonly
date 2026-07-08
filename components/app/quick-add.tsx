@@ -14,12 +14,12 @@ const RULE_PRESETS: { label: string; value: number; unit: OffsetUnit }[] = [
   { label: "J-1", value: 1, unit: "DAY" }, { label: "Le jour même", value: 0, unit: "DAY" },
 ];
 
-export function QuickAddButton({ plan, className, children }: { plan: "ESSENTIEL" | "PLUS"; className?: string; children: React.ReactNode }) {
+export function QuickAddButton({ plan, className, children, template }: { plan: "ESSENTIEL" | "PLUS"; className?: string; children: React.ReactNode; template?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button className={className} onClick={() => setOpen(true)}>{children}</button>
-      <QuickAddDialog plan={plan} open={open} onClose={() => setOpen(false)} />
+      <QuickAddDialog plan={plan} open={open} onClose={() => setOpen(false)} initialTemplate={template} />
     </>
   );
 }
@@ -35,7 +35,7 @@ export function QuickAddAuto({ plan }: { plan: "ESSENTIEL" | "PLUS" }) {
   return <QuickAddDialog plan={plan} open={open} onClose={() => { setOpen(false); router.replace(window.location.pathname); }} />;
 }
 
-function QuickAddDialog({ plan, open, onClose }: { plan: "ESSENTIEL" | "PLUS"; open: boolean; onClose: () => void }) {
+function QuickAddDialog({ plan, open, onClose, initialTemplate }: { plan: "ESSENTIEL" | "PLUS"; open: boolean; onClose: () => void; initialTemplate?: string }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -48,7 +48,11 @@ function QuickAddDialog({ plan, open, onClose }: { plan: "ESSENTIEL" | "PLUS"; o
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { if (!open) reset(); }, [open]);
+  useEffect(() => {
+    if (!open) { reset(); return; }
+    if (initialTemplate) applyTemplate(initialTemplate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   function reset() {
     setTitle(""); setDate(""); setTime(""); setCategory("ADMIN"); setRecurrence("NONE");
     setRules(new Set([30, 7, 1])); setChannels(new Set(["EMAIL", "PUSH"])); setNotes(""); setError(null);

@@ -35,6 +35,7 @@
     --scrollbar-thumb: rgba(13, 59, 70, 0.16);
     --sel-bg: #f6eedc;
     --sel-ink: #222b33;
+    --card-highlight: rgba(255, 255, 255, 0.55);
   }
   .dark {
     /* Palette sombre — même identité teal/sable, adaptée au fond profond */
@@ -67,6 +68,7 @@
     --scrollbar-thumb: rgba(255, 255, 255, 0.18);
     --sel-bg: #2a968b;
     --sel-ink: #f2f7f7;
+    --card-highlight: rgba(255, 255, 255, 0.06);
   }
   /* Crossfade doux appliqué uniquement pendant le basculement de thème */
   html.theme-anim * {
@@ -78,6 +80,15 @@
   }
   body {
     text-rendering: optimizeLegibility;
+    background-color: rgb(var(--c-bg));
+    background-image: radial-gradient(
+        105% 60% at 50% -12%,
+        rgb(var(--c-teal-soft) / 0.06),
+        transparent 58%
+      ),
+      radial-gradient(90% 50% at 100% 0%, rgb(var(--c-sand) / 0.05), transparent 55%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
   ::selection {
     background: var(--sel-bg);
@@ -143,6 +154,8 @@
   }
   .card {
     @apply rounded-lg border border-line bg-surface shadow-s;
+    box-shadow: 0 1px 2px rgba(13, 59, 70, 0.05), 0 3px 8px -1px rgba(13, 59, 70, 0.06),
+      inset 0 1px 0 var(--card-highlight);
   }
   .badge {
     @apply inline-flex h-[26px] items-center gap-1.5 rounded-full px-[11px] text-[12px] font-bold tracking-[0.02em];

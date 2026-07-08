@@ -55,9 +55,9 @@ const config: Config = {
         xl: "24px",
       },
       boxShadow: {
-        s: "0 1px 2px rgba(13,59,70,.04),0 2px 10px rgba(13,59,70,.05)",
-        m: "0 2px 6px rgba(13,59,70,.05),0 14px 34px rgba(13,59,70,.10)",
-        l: "0 6px 18px rgba(13,59,70,.08),0 28px 60px rgba(13,59,70,.14)",
+        s: "0 1px 2px rgba(13,59,70,.05),0 3px 8px -1px rgba(13,59,70,.06)",
+        m: "0 2px 6px rgba(13,59,70,.05),0 10px 24px -4px rgba(13,59,70,.10),0 22px 48px -10px rgba(13,59,70,.08)",
+        l: "0 4px 12px rgba(13,59,70,.06),0 18px 40px -8px rgba(13,59,70,.13),0 40px 84px -18px rgba(13,59,70,.18)",
       },
       maxWidth: { content: "1180px" },
       keyframes: {

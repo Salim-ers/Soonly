@@ -1,16 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  useSpring,
-  useTransform,
-  type MotionValue,
-} from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { LayoutDashboard, Calendar, FolderLock, Bell, Tag, CreditCard, Plus } from "lucide-react";
 import { Wordmark } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/app/theme-toggle";
@@ -26,33 +19,35 @@ const NAV = [
   { href: "/billing", label: "Abonnement", icon: CreditCard },
 ];
 
-const BASE = 34; // taille au repos (fin, petit)
-const PEAK = 58; // taille au survol (loupe)
+const TILE = 34; // taille au repos (fine)
+const PEAK = 1.5; // facteur de grossissement au survol
+const SPRING = { stiffness: 200, damping: 18, mass: 0.4 } as const; // ressort soyeux
 
 export function TopNav({ userName }: { userName: string }) {
   const mouseX = useMotionValue(Infinity);
   const pathname = usePathname();
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 hidden h-[68px] items-center justify-between gap-4 border-b border-line bg-surface/65 px-5 backdrop-blur-xl md:flex">
-      <Link href="/dashboard" className="flex-none" aria-label="Soonly — tableau de bord">
+    <header className="fixed inset-x-0 top-0 z-50 hidden h-[84px] grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-line bg-surface/60 px-6 backdrop-blur-2xl md:grid">
+      <Link href="/dashboard" className="justify-self-start" aria-label="Soonly — tableau de bord">
         <Wordmark size={27} />
       </Link>
 
-      {/* Dock magnétique façon macOS — capsule fine, icônes qui grossissent au survol */}
-      <motion.nav
+      {/* Dock magnétique façon macOS — capsule, icônes fluides + noms visibles */}
+      <nav
         onMouseMove={(e) => mouseX.set(e.clientX)}
         onMouseLeave={() => mouseX.set(Infinity)}
-        className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-end gap-2 rounded-full border border-line bg-surface-2/85 px-3 py-2 shadow-m backdrop-blur-xl"
+        className="flex items-center gap-1.5 justify-self-center rounded-[28px] border border-line bg-surface-2/70 px-3.5 py-2 shadow-l backdrop-blur-2xl"
+        style={{ boxShadow: "0 10px 40px -12px rgba(13,59,70,0.28), inset 0 1px 0 rgba(255,255,255,0.14)" }}
       >
-        <DockItem mouseX={mouseX} href="/reminders?new=1" label="Nouvelle échéance" Icon={Plus} accent />
-        <span className="mb-1 h-6 w-px self-center bg-line" />
+        <DockItem mouseX={mouseX} href="/reminders?new=1" label="Nouveau" Icon={Plus} accent />
+        <span className="mx-1 h-8 w-px self-center bg-line" />
         {NAV.map((n) => (
           <DockItem key={n.href} mouseX={mouseX} href={n.href} label={n.label} Icon={n.icon} active={pathname === n.href} />
         ))}
-      </motion.nav>
+      </nav>
 
-      <div className="flex flex-none items-center gap-2.5">
+      <div className="flex items-center justify-self-end gap-2.5">
         <SearchBar />
         <ThemeToggle variant="compact" />
         <Link
@@ -83,52 +78,42 @@ function DockItem({
   accent?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [hover, setHover] = useState(false);
 
   const distance = useTransform(mouseX, (val: number) => {
     const b = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
     return val - b.x - b.width / 2;
   });
-  const sizeSync = useTransform(distance, [-120, 0, 120], [BASE, PEAK, BASE]);
-  const size = useSpring(sizeSync, { mass: 0.1, stiffness: 170, damping: 13 });
+  const scaleSync = useTransform(distance, [-150, 0, 150], [1, PEAK, 1]);
+  const scale = useSpring(scaleSync, SPRING);
+  const liftSync = useTransform(distance, [-150, 0, 150], [0, -5, 0]);
+  const lift = useSpring(liftSync, SPRING);
 
   return (
-    <motion.div
-      ref={ref}
-      style={{ width: size, height: size }}
-      onHoverStart={() => setHover(true)}
-      onHoverEnd={() => setHover(false)}
-      className="relative flex items-center justify-center"
-    >
-      <Link
-        href={href}
-        aria-label={label}
+    <Link href={href} aria-label={label} className="group flex flex-col items-center gap-[7px] px-1.5">
+      <div ref={ref} className="grid place-items-center" style={{ width: TILE, height: TILE }}>
+        <motion.span
+          style={{ scale, y: lift }}
+          className={cn(
+            "grid h-full w-full origin-center place-items-center rounded-[11px] shadow-s transition-colors duration-200",
+            accent
+              ? "bg-teal text-on-teal"
+              : active
+                ? "bg-teal-tint text-teal ring-1 ring-teal-soft/40"
+                : "bg-surface text-ink-2 group-hover:text-teal",
+          )}
+        >
+          <Icon className="h-[54%] w-[54%]" strokeWidth={2} />
+        </motion.span>
+      </div>
+      <span
         className={cn(
-          "flex h-full w-full items-center justify-center rounded-full transition-colors",
-          accent
-            ? "bg-teal text-on-teal shadow-s"
-            : active
-              ? "bg-teal-tint text-teal ring-1 ring-teal-soft/40"
-              : "bg-surface text-ink-2 hover:text-teal",
+          "text-[10.5px] font-medium leading-none tracking-[-0.01em] transition-colors",
+          active ? "text-teal" : "text-ink-3 group-hover:text-ink-2",
         )}
       >
-        <Icon className="h-1/2 w-1/2" strokeWidth={2} />
-      </Link>
-
-      <AnimatePresence>
-        {hover && (
-          <motion.span
-            initial={{ opacity: 0, y: -4, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.9 }}
-            transition={{ duration: 0.14 }}
-            className="pointer-events-none absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-teal px-2.5 py-1 text-[11px] font-semibold text-on-teal shadow-l"
-          >
-            {label}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </motion.div>
+        {label}
+      </span>
+    </Link>
   );
 }
 

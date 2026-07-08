@@ -91,10 +91,10 @@ function QuickAddDialog({ plan, open, onClose }: { plan: "ESSENTIEL" | "PLUS"; o
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-[200]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <div className="absolute inset-0 bg-teal-deep/40 backdrop-blur-sm" onClick={onClose} />
           <motion.div
-            className="absolute inset-x-0 bottom-0 mx-auto max-h-[92vh] w-full overflow-auto rounded-t-[22px] bg-surface p-6 shadow-l sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:max-h-[86vh] sm:w-[560px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px] sm:p-7"
+            className="relative z-10 max-h-[92vh] w-full overflow-auto rounded-t-[22px] bg-surface p-6 shadow-l sm:max-h-[86vh] sm:w-[560px] sm:rounded-[24px] sm:p-7"
             initial={{ y: 40, opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} transition={{ ease: [0.22, 1, 0.36, 1], duration: 0.28 }}
           >
             <div className="mb-4 flex items-start justify-between gap-4">

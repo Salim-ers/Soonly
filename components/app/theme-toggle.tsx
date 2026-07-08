@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
 
 /**
- * Bascule clair / sombre — segmented control avec bouton glissant animé.
- * Le thème est appliqué sur <html class="dark"> et persisté dans localStorage.
- * Un crossfade doux est déclenché via la classe `theme-anim` (voir globals.css).
+ * Bascule clair / sombre. Deux formes :
+ *  - "segmented" : contrôle Clair/Sombre avec curseur glissant.
+ *  - "compact"   : bouton rond sun↔moon qui pivote (pour la barre du haut).
+ * Le thème est appliqué sur <html class="dark"> et persisté (localStorage).
+ * Crossfade doux via la classe `theme-anim` (voir globals.css).
  */
-export function ThemeToggle() {
+export function ThemeToggle({ variant = "segmented" }: { variant?: "segmented" | "compact" }) {
   const [dark, setDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -29,9 +31,29 @@ export function ThemeToggle() {
     window.setTimeout(() => root.classList.remove("theme-anim"), 460);
   }
 
-  // Réserve la place avant l'hydratation pour éviter tout saut visuel.
   if (!mounted) {
-    return <div className="h-[46px] w-full rounded-[13px] border border-line bg-surface-2" aria-hidden />;
+    return variant === "compact" ? (
+      <div className="h-10 w-10 flex-none rounded-full border border-line bg-surface-2" aria-hidden />
+    ) : (
+      <div className="h-[46px] w-full rounded-[13px] border border-line bg-surface-2" aria-hidden />
+    );
+  }
+
+  if (variant === "compact") {
+    return (
+      <button
+        onClick={() => set(!dark)}
+        aria-label={dark ? "Passer en mode clair" : "Passer en mode sombre"}
+        className="relative grid h-10 w-10 flex-none place-items-center overflow-hidden rounded-full border border-line bg-surface-2 text-ink-2 transition-colors hover:border-line-strong hover:text-teal"
+      >
+        <Sun
+          className={`absolute h-[17px] w-[17px] transition-all duration-300 ${dark ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"}`}
+        />
+        <Moon
+          className={`absolute h-[17px] w-[17px] transition-all duration-300 ${dark ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0"}`}
+        />
+      </button>
+    );
   }
 
   return (

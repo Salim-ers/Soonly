@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { db } from "./db";
-import { getUserPlan } from "./permissions";
+import { planFromSubscription } from "./permissions";
 import { zoneFor, daysUntil } from "./dates";
 import type { Reminder, ReminderRule, Document, User, Plan } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
@@ -15,7 +15,7 @@ export async function getSessionUser(): Promise<SessionUser> {
   if (!session?.user?.id) redirect("/login");
   const user = await db.user.findUnique({ where: { id: session.user.id }, include: { subscription: true } });
   if (!user) redirect("/login");
-  const plan = await getUserPlan(user.id);
+  const plan = planFromSubscription(user.subscription);
   let trialDaysLeft: number | null = null;
   if (user.subscription?.status === "TRIALING" && user.subscription.currentPeriodEnd) {
     trialDaysLeft = Math.max(0, differenceInCalendarDays(user.subscription.currentPeriodEnd, new Date()));
@@ -43,8 +43,12 @@ export type Dashboard = {
 };
 
 export async function getDashboard(userId: string): Promise<Dashboard> {
-  const reminders = await getActiveReminders(userId);
-  const documents = await db.document.findMany({ where: { userId } });
+  // Requêtes indépendantes lancées en parallèle (1 aller-retour au lieu de 3).
+  const [reminders, documents, user] = await Promise.all([
+    getActiveReminders(userId),
+    db.document.findMany({ where: { userId } }),
+    db.user.findUnique({ where: { id: userId }, select: { phoneVerifiedAt: true } }),
+  ]);
 
   const zones: Dashboard["zones"] = { late: [], today: [], week: [], month: [], later: [] };
   for (const r of reminders) zones[zoneFor(r.dueAt)].push(r);
@@ -56,7 +60,6 @@ export async function getDashboard(userId: string): Promise<Dashboard> {
   if (noRule.length) { score -= 2 * noRule.length; tips.push({ points: 2 * noRule.length, text: `Ajouter un rappel à « ${noRule[0].title} »` }); }
   const expired = documents.filter((d) => d.expirationDate && daysUntil(d.expirationDate) < 0);
   if (expired.length) { score -= 2 * expired.length; tips.push({ points: 2 * expired.length, text: `Remplacer un document expiré (${expired[0].title})` }); }
-  const user = await db.user.findUnique({ where: { id: userId } });
   if (user && !user.phoneVerifiedAt) { score -= 4; tips.push({ points: 4, text: "Vérifier votre numéro de téléphone" }); }
   score = Math.max(0, Math.min(100, score));
 

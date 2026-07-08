@@ -16,13 +16,17 @@ export function planAllows(plan: Plan, feature: Feature): boolean {
   return !PLUS_ONLY.includes(feature);
 }
 
+/** Déduit le plan d'un objet abonnement déjà chargé (aucune requête). */
+export function planFromSubscription(sub: { status: string; plan: Plan } | null | undefined): Plan {
+  if (!sub) return "ESSENTIEL";
+  if (!["TRIALING", "ACTIVE", "PAST_DUE"].includes(sub.status)) return "ESSENTIEL";
+  return sub.plan;
+}
+
 /** Renvoie le plan effectif d'un utilisateur (par défaut ESSENTIEL). */
 export async function getUserPlan(userId: string): Promise<Plan> {
   const sub = await db.subscription.findUnique({ where: { userId } });
-  if (!sub) return "ESSENTIEL";
-  const activeStatuses = ["TRIALING", "ACTIVE", "PAST_DUE"];
-  if (!activeStatuses.includes(sub.status)) return "ESSENTIEL";
-  return sub.plan;
+  return planFromSubscription(sub);
 }
 
 export class PlanError extends Error {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Calendar, FolderLock, Tag, Bell, CreditCard, Plus, User, Sparkles, ShieldCheck } from "lucide-react";
 import { Wordmark } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -65,6 +66,7 @@ export function Sidebar({
           <div className="min-w-0"><b className="block truncate text-[13.5px] leading-tight">{userName}</b>
             <span className="text-[11.5px] text-ink-3">{plan === "PLUS" ? "Soonly Plus" : "Soonly Essentiel"}</span></div>
         </Link>
+        <ThemeToggle />
       </div>
     </aside>
   );

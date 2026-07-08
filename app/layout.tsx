@@ -28,10 +28,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('soonly-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${sans.variable} ${display.variable} ${brand.variable}`}>
-      <body className="bg-bg text-ink font-sans antialiased">{children}</body>
+    <html lang="fr" suppressHydrationWarning className={`${sans.variable} ${display.variable} ${brand.variable}`}>
+      <body className="bg-bg text-ink font-sans antialiased">
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,5 +1,5 @@
 /* Service Worker Soonly — notifications push + offline minimal. */
-const CACHE = "soonly-v1";
+const CACHE = "soonly-v2";
 const APP_SHELL = ["/", "/dashboard", "/offline"];
 
 self.addEventListener("install", (event) => {
